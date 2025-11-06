@@ -93,5 +93,10 @@ def health_check():
     """Health check endpoint"""
     return jsonify({"status": "healthy", "service": "gupshup-webhook"}), 200
 
+@app.route('/status', methods=['GET'])
+def status_check():
+    """Simple status endpoint for testing"""
+    return "activo", 200
+
 if __name__ == '__main__':
     app.run(debug=True)
