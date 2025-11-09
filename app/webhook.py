@@ -4,9 +4,13 @@ from typing import Dict, Any
 from config.database import get_db_session
 from app.repositories.gupshup_repository import GupshupRepository
 from app.repositories.accounts_repository import AccountsRepository
+from app.repositories.account_prompts_repository import AccountPromptsRepository
 from app.repositories.chat_session_repository import ChatSessionRepository
 from app.repositories.message_repository import MessageRepository
 from app.repositories.products_repository import ProductsRepository
+from app.repositories.simple_answer_repository import SimpleAnswerRepository
+from app.repositories.text_chatbot_repository import TextChatbotRepository
+from app.repositories.session_data_repository import SessionDataRepository
 from app.services.gupshup_service import GupshupService
 
 app = Flask(__name__)
@@ -30,13 +34,25 @@ def gupshup_webhook():
         # Inicializar repositories
         gupshup_repo = GupshupRepository(db_session)
         accounts_repo = AccountsRepository(db_session)
+        account_prompts_repo = AccountPromptsRepository(db_session)
         session_repo = ChatSessionRepository(db_session)
         message_repo = MessageRepository(db_session)
         products_repo = ProductsRepository(db_session)
+        simple_answer_repo = SimpleAnswerRepository(db_session)
+        text_chatbot_repo = TextChatbotRepository(db_session)
+        session_data_repo = SessionDataRepository(db_session)
         
         # Inicializar service con todos los repositories
         gupshup_service = GupshupService(
-            gupshup_repo, accounts_repo, session_repo, message_repo, products_repo
+            gupshup_repo, 
+            accounts_repo, 
+            session_repo, 
+            message_repo, 
+            products_repo,
+            account_prompts_repo,
+            simple_answer_repo,
+            text_chatbot_repo,
+            session_data_repo
         )
         
         # Procesar webhook y guardar en gupshup_log

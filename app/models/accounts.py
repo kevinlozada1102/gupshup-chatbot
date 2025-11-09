@@ -1,5 +1,5 @@
 # app/models/accounts.py
-from sqlalchemy import Column, Integer, Text
+from sqlalchemy import Column, Integer, Text, String
 from . import Base
 
 class TblAccounts(Base):
@@ -11,6 +11,7 @@ class TblAccounts(Base):
     gs_user = Column(Text, nullable=True)
     gs_password = Column(Text, nullable=True)
     appid = Column(Text, nullable=True)
+    processing_strategy = Column(String(50), nullable=True, default='langchain')
     
     def __repr__(self):
         return f"<TblAccounts(id={self.id}, account_id='{self.account_id}', appid='{self.appid}')>"

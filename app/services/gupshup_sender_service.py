@@ -447,3 +447,245 @@ class GupshupSenderService:
                 "success": False,
                 "error": f"Error con template: {str(e)}"
             }
+    
+    def send_template_message_v3(self, to: str, template_name: str, language_code: str,
+                                template_components: list, display_phone_number: str) -> Dict[str, Any]:
+        """
+        Envía mensaje de template usando la API oficial de Gupshup V3.
+        Basado en: https://partner-docs.gupshup.io/reference/post_partner-app-appid-v3-message-14
+        
+        Args:
+            to: Número del destinatario (ej: '51987654321')
+            template_name: Nombre de la plantilla aprobada
+            language_code: Código de idioma (ej: 'es', 'en_US')
+            template_components: Componentes del template (parámetros)
+            display_phone_number: Número de la cuenta WhatsApp Business
+        
+        Returns:
+            Dict con resultado del envío
+        """
+        try:
+            # 1. Obtener credenciales y tokens (mismo flujo que send_text_message)
+            account = self.accounts_repo.find_by_from_uid(display_phone_number)
+            
+            if not account or not account.appid or not account.gs_user or not account.gs_password:
+                return {
+                    "success": False,
+                    "error": "Credenciales incompletas para template",
+                    "error_code": "MISSING_CREDENTIALS"
+                }
+            
+            # 2. Login y obtener tokens (reutilizando lógica existente)
+            login_result = self.get_login_partner(account.gs_user, account.gs_password)
+            if not login_result["success"]:
+                return {
+                    "success": False,
+                    "error": f"Login fallido para template: {login_result['error']}",
+                    "error_code": "LOGIN_FAILED"
+                }
+            
+            login_token = login_result["login_response"].get("token")
+            token_result = self.get_token_app(login_token, account.appid)
+            if not token_result["success"]:
+                return {
+                    "success": False,
+                    "error": f"Token app fallido para template: {token_result['error']}",
+                    "error_code": "TOKEN_APP_FAILED"
+                }
+            
+            app_token = token_result["token_response"]["token"]["token"]
+            
+            # 3. Construir URL y headers según documentación oficial
+            url = f"https://partner.gupshup.io/partner/app/{account.appid}/v3/message"
+            headers = {
+                "accept": "application/json",
+                "Authorization": app_token,
+                "Content-Type": "application/json"
+            }
+            
+            # 4. Payload según documentación oficial
+            payload = {
+                "messaging_product": "whatsapp",
+                "recipient_type": "individual",
+                "to": to,
+                "type": "template",
+                "template": {
+                    "name": template_name,
+                    "language": {
+                        "code": language_code
+                    },
+                    "components": template_components
+                }
+            }
+            
+            print(f"📋 TEMPLATE: Enviando template '{template_name}' a {to}")
+            print(f"📋 TEMPLATE: Payload: {payload}")
+            
+            # 5. Enviar request
+            response = requests.post(url, headers=headers, json=payload, timeout=15)
+            
+            if response.status_code == 200:
+                response_data = response.json()
+                print(f"✅ TEMPLATE: Enviado exitosamente - Response: {response_data}")
+                
+                return {
+                    "success": True,
+                    "message_id": response_data.get("messages", [{}])[0].get("id"),
+                    "template_name": template_name,
+                    "messaging_product": response_data.get("messaging_product"),
+                    "contacts": response_data.get("contacts", []),
+                    "gupshup_response": response_data
+                }
+            else:
+                error_data = response.json() if 'application/json' in response.headers.get('content-type', '') else response.text
+                print(f"❌ TEMPLATE: Error - Status: {response.status_code}, Response: {error_data}")
+                
+                return {
+                    "success": False,
+                    "error": f"Error enviando template: HTTP {response.status_code}",
+                    "error_details": error_data,
+                    "error_code": "HTTP_ERROR"
+                }
+                
+        except Exception as e:
+            print(f"❌ TEMPLATE: Excepción - {str(e)}")
+            return {
+                "success": False,
+                "error": f"Error con template V3: {str(e)}",
+                "error_code": "UNEXPECTED_ERROR"
+            }
+    
+    def send_flow_message(self, to: str, flow_data: dict, display_phone_number: str) -> Dict[str, Any]:
+        """
+        Envía mensaje con Flow usando la API oficial de Gupshup V3.
+        Basado en: https://partner-docs.gupshup.io/reference/post_partner-app-appid-v3-flow-message-6
+        
+        Args:
+            to: Número del destinatario (ej: '51987654321')
+            flow_data: Datos del flow (JSON parseado)
+            display_phone_number: Número de la cuenta WhatsApp Business
+        
+        Returns:
+            Dict con resultado del envío
+        
+        Ejemplo de flow_data:
+        {
+            "id": "1449142816146253",
+            "token": "1449142816146253", 
+            "text": "Validación de Cuenta de Cliente",
+            "button": "Registrar",
+            "description": "Registrar",
+            "screen": "RECOMMEND"
+        }
+        """
+        try:
+            # 1. Obtener credenciales y tokens (mismo flujo que otras funciones)
+            account = self.accounts_repo.find_by_from_uid(display_phone_number)
+            
+            if not account or not account.appid or not account.gs_user or not account.gs_password:
+                return {
+                    "success": False,
+                    "error": "Credenciales incompletas para flow",
+                    "error_code": "MISSING_CREDENTIALS"
+                }
+            
+            # 2. Login y obtener tokens
+            login_result = self.get_login_partner(account.gs_user, account.gs_password)
+            if not login_result["success"]:
+                return {
+                    "success": False,
+                    "error": f"Login fallido para flow: {login_result['error']}",
+                    "error_code": "LOGIN_FAILED"
+                }
+            
+            login_token = login_result["login_response"].get("token")
+            token_result = self.get_token_app(login_token, account.appid)
+            if not token_result["success"]:
+                return {
+                    "success": False,
+                    "error": f"Token app fallido para flow: {token_result['error']}",
+                    "error_code": "TOKEN_APP_FAILED"
+                }
+            
+            app_token = token_result["token_response"]["token"]["token"]
+            
+            # 3. Construir URL y headers según documentación oficial
+            url = f"https://partner.gupshup.io/partner/app/{account.appid}/v3/message"
+            headers = {
+                "Authorization": app_token,
+                "Content-Type": "application/json"
+            }
+            
+            # 4. Construir payload para Flow según documentación
+            payload = {
+                "recipient_type": "individual",
+                "messaging_product": "whatsapp",
+                "to": to,
+                "type": "interactive",
+                "interactive": {
+                    "type": "flow",
+                    "header": {
+                        "type": "text",
+                        "text": flow_data.get("text", "Flow Message")
+                    },
+                    "body": {
+                        "text": flow_data.get("description", "Complete the form below")
+                    },
+                    "footer": {
+                        "text": "Powered by Gupshup"
+                    },
+                    "action": {
+                        "name": "flow",
+                        "parameters": {
+                            "flow_message_version": "3",
+                            "flow_token": flow_data.get("token", ""),
+                            "flow_id": flow_data.get("id", ""),
+                            "flow_cta": flow_data.get("button", "Continue"),
+                            "flow_action": "navigate",
+                            "flow_action_payload": {
+                                "screen": flow_data.get("screen", "MAIN"),
+                                "data": {
+                                    "flow_data": flow_data
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            
+            print(f"🌊 FLOW: Enviando flow ID '{flow_data.get('id')}' a {to}")
+            print(f"🌊 FLOW: Payload: {payload}")
+            
+            # 5. Enviar request
+            response = requests.post(url, headers=headers, json=payload, timeout=15)
+            
+            if response.status_code == 200:
+                response_data = response.json()
+                print(f"✅ FLOW: Enviado exitosamente - Response: {response_data}")
+                
+                return {
+                    "success": True,
+                    "message_id": response_data.get("messages", [{}])[0].get("id"),
+                    "flow_id": flow_data.get("id"),
+                    "messaging_product": response_data.get("messaging_product"),
+                    "contacts": response_data.get("contacts", []),
+                    "gupshup_response": response_data
+                }
+            else:
+                error_data = response.json() if 'application/json' in response.headers.get('content-type', '') else response.text
+                print(f"❌ FLOW: Error - Status: {response.status_code}, Response: {error_data}")
+                
+                return {
+                    "success": False,
+                    "error": f"Error enviando flow: HTTP {response.status_code}",
+                    "error_details": error_data,
+                    "error_code": "HTTP_ERROR"
+                }
+                
+        except Exception as e:
+            print(f"❌ FLOW: Excepción - {str(e)}")
+            return {
+                "success": False,
+                "error": f"Error con flow: {str(e)}",
+                "error_code": "UNEXPECTED_ERROR"
+            }
