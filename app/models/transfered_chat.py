@@ -1,7 +1,9 @@
 # app/models/transfered_chat.py
 from sqlalchemy import Column, Integer, String, DateTime, Boolean, Numeric, Text
 from sqlalchemy.sql import func
-from app.config.database import Base
+
+# Import Base from the models package
+from . import Base
 
 class TblTransferedChats(Base):
     __tablename__ = "tbl_transfered_chats"
