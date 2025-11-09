@@ -11,6 +11,7 @@ from .session_segment import TblChatSessionSegment
 from .session_data import TblSessionData
 from .simple_answer import TblSimpleAnswer
 from .text_chatbot import TblTextChatbot
+from .transfered_chat import TblTransferedChats
 from .gupshup_log import TblGupshupLog
 from .message import TblMessage
 from .products import TblProducts
@@ -23,7 +24,8 @@ __all__ = [
     'TblChatSessionSegment',
     'TblSessionData',
     'TblSimpleAnswer',
-    'TblTextChatbot',
+    'TblTextChatbot', 
+    'TblTransferedChats',
     'TblGupshupLog',
     'TblMessage',
     'TblProducts'

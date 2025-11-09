@@ -89,9 +89,26 @@ class HandlerService:
         end_handler = EndHandler()
         self.handler_registry.register(end_handler)
         
-        # Registrar DummyHandler (testing)
-        dummy_handler = DummyHandler()
-        self.handler_registry.register(dummy_handler)
+        # Registrar DummyHandler (transferencias a agentes)
+        try:
+            from app.repositories.transfered_chat_repository import TransferedChatRepository
+            from app.config.database import SessionLocal
+            
+            # Crear repositorio temporal para transferencias
+            db_session = SessionLocal()
+            try:
+                transfered_chat_repo = TransferedChatRepository(db_session)
+                dummy_handler = DummyHandler(self.simple_answer_repo, transfered_chat_repo)
+                self.handler_registry.register(dummy_handler)
+                print(f"✅ Handler registrado: DummyHandler (con transferencias)")
+            finally:
+                db_session.close()
+                
+        except Exception as e:
+            print(f"⚠️ DummyHandler sin transferencias: {e}")
+            # Fallback sin transferencias
+            dummy_handler = DummyHandler(self.simple_answer_repo)
+            self.handler_registry.register(dummy_handler)
         
         print(f"📋 Handlers registrados: {self.handler_registry.list_handlers()}")
     
