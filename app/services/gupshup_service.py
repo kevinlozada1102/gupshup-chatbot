@@ -77,9 +77,9 @@ class GupshupService:
                 channel="whatsapp"
             )
             
-            # 3. Si es mensaje de texto del usuario, procesar mensaje
+            # 3. Si es mensaje de texto o interactivo del usuario, procesar mensaje
             if webhook_data.is_text_message():
-                print("✅ WEBHOOK: Es mensaje de texto - procesando...")
+                print(f"✅ WEBHOOK: Es mensaje de tipo '{webhook_data.message_type}' - procesando...")
                 session_result = self._process_user_message(webhook_data)
                 return {
                     "success": True,
@@ -91,7 +91,7 @@ class GupshupService:
                 }
             
             # 4. Para otros tipos (status, etc.) solo retornar log
-            print(f"⚠️ WEBHOOK: NO es mensaje de texto - tipo: {webhook_data.message_type}, is_user: {webhook_data.is_user_message}")
+            print(f"⚠️ WEBHOOK: NO es mensaje procesable - tipo: {webhook_data.message_type}, is_user: {webhook_data.is_user_message}")
             return {
                 "success": True,
                 "log_id": log_result.id,
@@ -152,6 +152,15 @@ class GupshupService:
                             if webhook_data.message_type == "text":
                                 text_content = first_message.get("text", {})
                                 webhook_data.message_body = text_content.get("body")
+                            elif webhook_data.message_type == "interactive":
+                                # Extraer contenido de mensaje interactivo (botones)
+                                interactive_content = first_message.get("interactive", {})
+                                if interactive_content.get("type") == "button_reply":
+                                    button_reply = interactive_content.get("button_reply", {})
+                                    webhook_data.message_body = button_reply.get("title", "")
+                                elif interactive_content.get("type") == "list_reply":
+                                    list_reply = interactive_content.get("list_reply", {})
+                                    webhook_data.message_body = list_reply.get("title", "")
                         
                         # Procesar status updates
                         elif statuses and len(statuses) > 0:

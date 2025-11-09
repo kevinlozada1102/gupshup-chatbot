@@ -24,8 +24,8 @@ class WebhookData:
     raw_payload: Optional[dict] = None
     
     def is_text_message(self) -> bool:
-        """Verifica si es un mensaje de texto del usuario"""
-        return self.is_user_message and self.message_type == "text"
+        """Verifica si es un mensaje de texto o interactivo del usuario"""
+        return self.is_user_message and self.message_type in ["text", "interactive"]
     
     def has_required_fields(self) -> bool:
         """Verifica si tiene los campos mínimos requeridos"""
